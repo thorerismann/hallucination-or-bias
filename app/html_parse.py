@@ -1,13 +1,17 @@
 
 import json
 import pandas as pd
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from urllib.request import urlopen, Request
 
+import re
+from pathlib import Path
+INPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\input_files")
+OUTPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\webdata")
+
 from bs4 import BeautifulSoup
-from pygments.lexers import j
 
 
 # ---------- Dataclass (schema enforcement) ----------
@@ -93,21 +97,16 @@ def _pick_newsarticle(obj: Any) -> Optional[Dict[str, Any]]:
 
     # Case 1: single dict
     if isinstance(obj, dict):
-        print('passed a bit')
         if obj.get("@type") in ("NewsArticle", "Article"):
-            print('hi')
             return obj
         return None
 
     # Case 2: list of dicts
     if isinstance(obj, list):
-        print('passed a bit 2')
         for it in obj:
             if isinstance(it, dict) and it.get("@type") in ("NewsArticle", "Article"):
-                print('super hi')
                 return it
         return None
-    print('total fail)')
     # Anything else → fail
     return None
 
@@ -276,31 +275,27 @@ def parse_html(url: str) -> RTSArticle:
 
     )
 
+# save the data
 
-from pathlib import Path
+def make_filename(article):
+    # 1) Try RTS numeric ID from URL
+    url = article.get("canonical_url") or article.get("url")
+    if isinstance(url, str):
+        m = re.search(r"-(\d+)\.html$", url)
+        if m:
+            return f"{m.group(1)}.json"
 
-path = r"C:\Users\erismanng\PycharmProjects\hallucination-or-bias\some_rts_links.csv"
-def iter_urls(path):
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            url = line.strip()
-            if not url:
-                continue
-            if not url.startswith("http"):
-                continue
-            yield url
+    # 2) Fallback: short title slug
+    title = article.get("title") or article.get("headline") or "article"
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", title.lower()).strip("_")
+    return f"{slug[:30]}.json"
 
 
-
-results = []
-errors = []
-
-for url in iter_urls(path):
-    print(url)
-    try:
-        article = parse_html(url)
-        print(article)
-        results.append(article)
-    except Exception as e:
-        errors.append((url, str(e)))
-        print("FAILED:", url, e)
+def save_data(articles):
+    for article in articles:
+        fname = make_filename(article)
+        print(fname)
+        save_path = OUTPUT_PATH / fname
+        print(save_path)
+        with open(save_path, "w", encoding="utf-8") as f:
+            json.dump(article, f, ensure_ascii=False, indent=2)
