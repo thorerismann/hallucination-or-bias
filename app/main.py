@@ -2,9 +2,8 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from html_parse import parse_html, save_data
 from prompting import score_folder
-from setup import INPUT_PATH, OUTPUT_PATH, check_for_inputs
+from setup import load_settings
 
-RUNS = 5
 
 def process_csv(file_path):
     with open(file_path, 'r') as f:
@@ -26,17 +25,12 @@ def process_csv(file_path):
             print(f"Error processing {url}: {e}")
     return articles
 
-def extract_htmls():
-    input_files = check_for_inputs()
-    if len(input_files) == 0:
-        print('No valid input file found. Put a list of valid RTS urls in a CSV file.')
-        return
-    for input_file in input_files:
-        all_data = process_csv(input_file)
-        save_data(all_data)
+def extract_htmls(settings: dict):
+    all_data = process_csv(settings['INPUT_FILE'])
+    save_data(all_data)
 
 
+settings = load_settings(Path.cwd() / "app")
 
-
-# extract_htmls()
-score_folder(Path(r'app\webdata'), RUNS)
+extract_htmls(settings)
+score_folder(Path(r'app\webdata'), settings)

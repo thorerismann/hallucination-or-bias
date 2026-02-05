@@ -1,24 +1,49 @@
+# app/load_settings.py
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any, Dict
 
-INPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\input_files")
-OUTPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\webdata")
+from settings import Settings
 
-def check_input_output_paths():
-    if not INPUT_PATH.exists():
-        INPUT_PATH.mkdir(parents=True)
-    if not OUTPUT_PATH.exists():
-        OUTPUT_PATH.mkdir(parents=True)
 
-def check_for_inputs():
-    check_input_output_paths
-    files = list(INPUT_PATH.iterdir())
-    if len(files) == 0:
-        print(f"No input files found in {INPUT_PATH}. Please add urls in csv format to process.")
-        return None
+def project_root(anchor_file: str | Path) -> Path:
+    """
+    anchor_file: typically __file__ from main.py
+    Returns the directory that contains main.py.
+    """
+    return Path(anchor_file).resolve().parent
 
-    return files
 
-def check_urls():
-    # figure out how to check the urls for each file and give a warning if something is clearly wrong
-    # hard to know until its processed exactly, but obvious file not right shit should be caught
-    pass
+def load_settings(anchor_file: str | Path) -> Dict[str, Any]:
+    """
+    Returns a dict with fully-resolved Paths and the loaded prompt text.
+    Works on Windows + Linux.
+    """
+    root = project_root(anchor_file)
+    s = Settings()
+
+    # resolve directories/files relative to root
+    input_dir = (root / s.input_file).resolve()
+    webdata_dir = (root / s.webdata_dir).resolve()
+    final_dir = (root / s.final_dir).resolve()
+    prompt_path = (root / s.prompt_template).resolve()
+
+    # ensure dirs exist
+    webdata_dir.mkdir(parents=True, exist_ok=True)
+    final_dir.mkdir(parents=True, exist_ok=True)
+
+    prompt_text = prompt_path.read_text(encoding="utf-8")
+
+    return {
+        "PROJECT_ROOT": root,
+        "INPUT_FILE": input_dir,
+        "WEB_DATA_DIR": webdata_dir,
+        "OUTPUT_DIR": final_dir,
+        "RUNS": int(s.runs),
+        "OLLAMA_URL": str(s.ollama_url),
+        "MODELS": list(s.models),
+        "PROMPT_TEMPLATE_PATH": prompt_path,
+        "PROMPT_TEMPLATE": prompt_text,
+        "TIMEOUT": s.timeout
+    }
