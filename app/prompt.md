@@ -32,7 +32,7 @@ Schema:
   "treatment_bias": <float>,
   "guests_bias": <float>,
   "confidence": <float>,
-  "comment": <MAX 3 sentence string>,
+  "comment": <MAX 2 sentence string>,
 }
 
 

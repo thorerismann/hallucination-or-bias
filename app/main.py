@@ -1,36 +1,26 @@
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from html_parse import parse_html, save_data
+
+from post_processing import create_final_webdata_dataset, prepare_results_frame
+from html_parse import process_input_data, save_data
 from prompting import score_folder
-from setup import load_settings
+from settings import Settings
 
 
-def process_csv(file_path):
-    with open(file_path, 'r') as f:
-        urls = f.readlines()
-    articles = []
-    for url in urls:
-        # check them
-        # then call
-        try:
-            url = url.strip()
-            if not url.startswith("http"):
-                print(f"Skipping invalid URL: {url}")
-                continue
-            data = parse_html(url)
-            if is_dataclass(data):
-                data = asdict(data)
-            articles.append(data)
-        except Exception as e:
-            print(f"Error processing {url}: {e}")
-    return articles
-
-def extract_htmls(settings: dict):
-    all_data = process_csv(settings['INPUT_FILE'])
-    save_data(all_data)
+def extract_htmls(settings):
+    all_data = process_input_data(settings.input_file)
+    save_data(all_data, settings.webdata_dir)
 
 
-settings = load_settings(Path.cwd() / "app")
+def run_pipeline():
+    settings = Settings()
+    # extract_htmls(settings)
+    # score_folder(settings)
+    results_bias = prepare_results_frame(settings)
+    # web_data = create_final_webdata_dataset(settings)
+    print('hallo')
+    results_bias.to_csv('bias_data_2.csv', index=False)
+    # web_data.to_csv('web_data.csv', index=False)
 
-extract_htmls(settings)
-score_folder(Path(r'app\webdata'), settings)
+run_pipeline()
+

@@ -1,15 +1,13 @@
 
 import json
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, asdict
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from urllib.request import urlopen, Request
 
 import re
 from pathlib import Path
-INPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\input_files")
-OUTPUT_PATH = Path(r"C:\Users\erismanng\pbias2\hallucination-or-bias\app\webdata")
 
 from bs4 import BeautifulSoup
 
@@ -40,6 +38,27 @@ class RTSArticle:
     # Other extracted blocks
     sources: List[str]
     credit: List[str]
+
+# prepare data
+def process_input_data(file_path):
+    with open(file_path, 'r') as f:
+        urls = f.readlines()
+    articles = []
+    for url in urls:
+        # check them
+        # then call
+        try:
+            url = url.strip()
+            if not url.startswith("http"):
+                print(f"Skipping invalid URL: {url}")
+                continue
+            data = parse_html(url)
+            if is_dataclass(data):
+                data = asdict(data)
+            articles.append(data)
+        except Exception as e:
+            print(f"Error processing {url}: {e}")
+    return articles
 
 
 # ---------- Fetch ----------
@@ -291,11 +310,9 @@ def make_filename(article):
     return f"{slug[:30]}.json"
 
 
-def save_data(articles):
+def save_data(articles, directory):
     for article in articles:
         fname = make_filename(article)
-        print(fname)
-        save_path = OUTPUT_PATH / fname
-        print(save_path)
+        save_path = directory / fname
         with open(save_path, "w", encoding="utf-8") as f:
             json.dump(article, f, ensure_ascii=False, indent=2)
